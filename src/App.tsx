@@ -26,6 +26,16 @@ interface ApiError {
   error: string
 }
 
+
+// 백엔드 쓰기 요청(POST/PUT/DELETE)은 API_KEY 가 설정돼 있으면 X-API-Key 헤더를 요구한다.
+// 주의: VITE_* 값은 빌드 결과물(브라우저 번들)에 그대로 들어가므로 누구나 볼 수 있다.
+// 무작위 스크립트의 쓰기를 막는 약한 장벽일 뿐 사용자 인증이 아니다.
+const API_KEY: string | undefined = import.meta.env.VITE_API_KEY
+
+function writeAuthHeaders(): Record<string, string> {
+  return API_KEY ? { 'X-API-Key': API_KEY } : {}
+}
+
 function App() {
   const [ddays, setDdays] = useState<DDay[]>([])
   const [newDDay, setNewDDay] = useState({
@@ -46,7 +56,7 @@ function App() {
   const [sortBy, setSortBy] = useState('target_date')
   const [sortDirection, setSortDirection] = useState('asc')
 
-  const API_BASE = 'http://localhost:8080/api/v1'
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
 
   useEffect(() => {
     fetchDDays(currentPage)
@@ -115,6 +125,7 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...writeAuthHeaders(),
         },
         body: JSON.stringify(newDDay),
       })
@@ -152,6 +163,7 @@ function App() {
     try {
       const response = await fetch(`${API_BASE}/ddays/${id}`, {
         method: 'DELETE',
+        headers: writeAuthHeaders(),
       })
       
       if (!response.ok) {
